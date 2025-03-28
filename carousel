@@ -1,0 +1,208 @@
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Button, IconButton } from '@mui/material';
+import { ArrowBackIos, ArrowForwardIos } from '@mui/icons-material';
+import { fetchActiveBrandings } from '../api/brandingApi';
+
+const ANIMATION_DURATION = 500; // in ms
+const AUTO_SLIDE_INTERVAL = 5000; // in ms
+
+const BrandingCarousel = () => {
+  const [brandings, setBrandings] = useState([]);
+  const [current, setCurrent] = useState(0);
+  const [fadeClass, setFadeClass] = useState('fadeIn');
+
+  useEffect(() => {
+    fetchActiveBrandings()
+      .then((data) => setBrandings(data))
+      .catch((error) => console.error("Error fetching brandings:", error));
+  }, []);
+
+  // Function to move to the next slide with fade animation
+  const nextSlide = () => {
+    setFadeClass('fadeOut');
+    setTimeout(() => {
+      setCurrent((prev) => (prev + 1) % brandings.length);
+      setFadeClass('fadeIn');
+    }, ANIMATION_DURATION);
+  };
+
+  // Function to move to the previous slide with fade animation
+  const prevSlide = () => {
+    setFadeClass('fadeOut');
+    setTimeout(() => {
+      setCurrent((prev) => (prev - 1 + brandings.length) % brandings.length);
+      setFadeClass('fadeIn');
+    }, ANIMATION_DURATION);
+  };
+
+  // Auto slide effect
+  useEffect(() => {
+    if (brandings.length > 0) {
+      const intervalId = setInterval(() => {
+        nextSlide();
+      }, AUTO_SLIDE_INTERVAL);
+      return () => clearInterval(intervalId);
+    }
+  }, [brandings]);
+
+  if (brandings.length === 0) {
+    return <Typography>No active brandings available.</Typography>;
+  }
+
+  return (
+    <Box
+      position="relative"
+      width="100%"
+      maxWidth="1000px"
+      mx="auto"
+      my={4}
+      sx={{
+        overflow: 'hidden',
+        borderRadius: 2,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+      }}
+    >
+      {/* Inline styles for fade animations */}
+      <style>
+        {`
+          .fadeIn {
+            animation: fadeIn ${ANIMATION_DURATION}ms;
+          }
+          .fadeOut {
+            animation: fadeOut ${ANIMATION_DURATION}ms;
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+          }
+        `}
+      </style>
+      
+      {/* Main slide area with background image and overlay */}
+      <Box
+        className={fadeClass}
+        sx={{
+          height: { xs: 300, md: 450 },
+          backgroundImage: `url(data:image/jpeg;base64,${brandings[current].imageBase64})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          position: 'relative',
+        }}
+      >
+        {/* Dark gradient overlay */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.3))',
+          }}
+        />
+        {/* Text & Button overlay */}
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: { xs: 16, md: 32 },
+            left: { xs: 16, md: 32 },
+            zIndex: 2,
+            color: '#fff',
+            maxWidth: { xs: '90%', md: '50%' },
+          }}
+        >
+          <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 2 }}>
+            {brandings[current].title}
+          </Typography>
+          <Typography variant="h6" sx={{ mb: 3, lineHeight: 1.4 }}>
+            {brandings[current].description}
+          </Typography>
+          <Button
+            variant="contained"
+            sx={{
+              backgroundColor: '#e50914',
+              color: '#fff',
+              fontWeight: 'bold',
+              '&:hover': { backgroundColor: '#f40612' },
+            }}
+            href={brandings[current].redirectUrl}
+            target="_blank"
+          >
+            Learn More
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Navigation arrows */}
+      <IconButton
+        onClick={prevSlide}
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          left: 16,
+          transform: 'translateY(-50%)',
+          color: '#fff',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
+          zIndex: 3,
+        }}
+      >
+        <ArrowBackIos />
+      </IconButton>
+      <IconButton
+        onClick={nextSlide}
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          right: 16,
+          transform: 'translateY(-50%)',
+          color: '#fff',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
+          zIndex: 3,
+        }}
+      >
+        <ArrowForwardIos />
+      </IconButton>
+
+      {/* Indicator dots */}
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: 16,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: 1,
+          zIndex: 3,
+        }}
+      >
+        {brandings.map((_, index) => (
+          <Box
+            key={index}
+            onClick={() => {
+              setFadeClass('fadeOut');
+              setTimeout(() => {
+                setCurrent(index);
+                setFadeClass('fadeIn');
+              }, ANIMATION_DURATION);
+            }}
+            sx={{
+              width: index === current ? 12 : 8,
+              height: index === current ? 12 : 8,
+              borderRadius: '50%',
+              backgroundColor: index === current ? '#e50914' : 'rgba(255,255,255,0.5)',
+              cursor: 'pointer',
+            }}
+          />
+        ))}
+      </Box>
+    </Box>
+  );
+};
+
+export default BrandingCarousel;
